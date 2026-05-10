@@ -1,9 +1,14 @@
-// Cliente HTTP minimalista para a API Hórus (proxied via /api → :8000).
+// Cliente HTTP da API Hórus.
+// SSR (server component): usa URL absoluta (Node fetch exige).
+// Client (browser): usa /api → proxy do next.config.js → :8001.
 
-export const API_BASE = "/api";
+const API_BASE_SERVER =
+  process.env.HORUS_API_URL ?? "http://localhost:8001";
+const API_BASE_CLIENT = "/api";
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const r = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+  const base = typeof window === "undefined" ? API_BASE_SERVER : API_BASE_CLIENT;
+  const r = await fetch(`${base}${path}`, { cache: "no-store" });
   if (!r.ok) throw new Error(`API ${path}: ${r.status} ${r.statusText}`);
   return r.json() as Promise<T>;
 }
