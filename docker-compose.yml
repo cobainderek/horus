@@ -1,7 +1,7 @@
 services:
   # Postgres 16 com extensão Apache AGE pra grafo
   db:
-    image: apache/age:PG16_latest
+    image: apache/age:release_PG16_1.6.0
     container_name: horus-db
     environment:
       POSTGRES_DB: horus

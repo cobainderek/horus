@@ -24,6 +24,7 @@ from sqlalchemy import text
 from .analytics.fuzzy_match import cruzar_agentes_socios_por_nome
 from .analytics.isolation_forest import prever_anomalias, treinar_modelo
 from .analytics.score import atualizar_todos_scores
+from .api import models  # noqa: F401 — registra tabelas em Base.metadata
 from .api.database import Base, SessionLocal, engine
 
 load_dotenv()

@@ -17,6 +17,7 @@ import sys
 
 from dotenv import load_dotenv
 
+from .api import models  # noqa: F401 — registra tabelas em Base.metadata
 from .api.database import Base, SessionLocal, engine
 
 load_dotenv()
