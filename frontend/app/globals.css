@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0a0f0c;
+  color: #d4e0d4;
+  font-family:
+    "JetBrains Mono", "Fira Code", "Source Code Pro", Menlo, Consolas,
+    "Courier New", monospace;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0f0c;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f2a26;
+  border-radius: 4px;
+}
