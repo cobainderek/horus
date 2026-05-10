@@ -1,6 +1,7 @@
 services:
+  # Postgres 16 com extensão Apache AGE pra grafo
   db:
-    image: postgres:16
+    image: apache/age:PG16_latest
     container_name: horus-db
     environment:
       POSTGRES_DB: horus
@@ -10,8 +11,21 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./docker/age-init.sql:/docker-entrypoint-initdb.d/01-age.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U horus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis pra Celery (broker + backend)
+  redis:
+    image: redis:7-alpine
+    container_name: horus-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
