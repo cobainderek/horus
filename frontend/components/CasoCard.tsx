@@ -10,6 +10,20 @@ const fmtData = (d: string | null) => {
   return dia && m && a ? `${dia}/${m}/${a}` : d;
 };
 
+const corSancao = (tipo: string | null | undefined) => {
+  const t = (tipo || "").toLowerCase();
+  if (t.includes("inidôn") || t.includes("inidon")) {
+    return "bg-red-900/30 border-red-500 text-red-400";
+  }
+  if (t.includes("impediment")) {
+    return "bg-orange-900/30 border-orange-500 text-orange-400";
+  }
+  if (t.includes("suspens")) {
+    return "bg-yellow-900/30 border-yellow-600 text-yellow-400";
+  }
+  return "bg-alert/15 border-alert text-alert";
+};
+
 export function CasoCard({ caso, indice }: { caso: Caso; indice: number }) {
   const [expandido, setExpandido] = useState(false);
   const limite = expandido ? caso.contratos.length : 3;
@@ -43,7 +57,7 @@ export function CasoCard({ caso, indice }: { caso: Caso; indice: number }) {
       {sancao && (
         <div className="py-4 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
-            <span className="inline-block px-2 py-0.5 bg-alert/15 border border-alert text-alert text-[10px] uppercase tracking-wider rounded">
+            <span className={`inline-block px-2 py-0.5 border text-[10px] uppercase tracking-wider rounded ${corSancao(sancao.tipo)}`}>
               {sancao.tipo || "sancionada"}
             </span>
             <span className="text-dim text-xs">

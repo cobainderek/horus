@@ -89,16 +89,17 @@ def casos(
     contratos federais (após ou apesar da sanção), valor total, link
     pro Portal da Transparência. É a visão investigativa/jornalística.
     """
+    # EXISTS evita inflação por múltiplas sanções da mesma empresa.
     empresas = db.execute(text("""
         SELECT
             e.cnpj,
             e.razao_social,
-            COUNT(DISTINCT c.id) AS n_contratos,
+            COUNT(c.id) AS n_contratos,
             COALESCE(SUM(c.valor), 0) AS valor_total
           FROM empresas e
-          JOIN ceis ce ON ce.cnpj = e.cnpj
           JOIN contratos_publicos c ON c.cnpj_fornecedor = e.cnpj
-         WHERE c.valor >= :v
+         WHERE EXISTS (SELECT 1 FROM ceis ce WHERE ce.cnpj = e.cnpj)
+           AND c.valor >= :v
          GROUP BY e.cnpj, e.razao_social
          ORDER BY valor_total DESC
          LIMIT :lim
