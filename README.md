@@ -99,19 +99,45 @@ pip install -r requirements.txt
 python -m spacy download pt_core_news_lg     # modelo NLP (~500 MB)
 ```
 
-### 3. Ingestão de dados (Script 1)
+### 3. Ingestão de dados — pipeline em duas camadas
+
+```
+  SITE  ─→  data/raw/*.csv  ─→  Postgres
+            (bronze)             (silver)
+```
+
+A camada **bronze** (CSV em `data/raw/`) preserva o dado bruto exatamente como
+veio da API, permite reprocessar sem bater na fonte de novo, vira **dataset
+reproduzível** pra análise de dados, e funciona como evidência (você anexa o
+CSV no relatório do PI III).
+
+A camada **silver** (Postgres) é o dado normalizado, pronto pros cruzamentos.
+
+#### Comandos
 
 ```bash
-# subcomandos individuais
-python -m backend.ingestao ceis --paginas 30
-python -m backend.ingestao contratos --paginas 2
+# camada bronze (API → CSV)
+python -m backend.ingestao baixar-ceis --paginas 30
+python -m backend.ingestao baixar-contratos --max-empresas 100
+
+# camada silver (CSV → BD) — pega o CSV mais recente automaticamente
+python -m backend.ingestao carregar-ceis
+python -m backend.ingestao carregar-contratos
+
+# OU fluxo completo (4 passos em sequência):
+python -m backend.ingestao tudo
+
+# inspeção
+python -m backend.ingestao listar-csvs
+
+# fontes secundárias (ainda direto pro BD, sem camada CSV)
 python -m backend.ingestao servidores --mes-ano 202602 --top 1000
 python -m backend.ingestao qsa
 python -m backend.ingestao doacoes
-
-# ou tudo de uma vez:
-python -m backend.ingestao tudo
 ```
+
+Os CSVs gerados são versionados por data: `ceis_2026-05-10.csv`,
+`contratos_2026-05-10.csv` — assim você acompanha a evolução do dataset.
 
 ### 4. Cruzamentos (Script 2)
 

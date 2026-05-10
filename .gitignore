@@ -43,5 +43,9 @@ pgdata/
 backend/analytics/*.joblib
 dados.json
 
+# Bronze layer (dados crus baixados das APIs)
+data/raw/*.csv
+!data/raw/.gitkeep
+
 # Misc
 *.log
