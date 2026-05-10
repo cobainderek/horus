@@ -41,6 +41,30 @@ export type DistribuicaoSancao = {
   quantidade: number;
 };
 
+export type Caso = {
+  empresa: {
+    cnpj: string;
+    razao_social: string;
+    link_transparencia: string;
+  };
+  sancoes: Array<{
+    tipo: string;
+    orgao_sancionador: string;
+    inicio: string | null;
+    fim: string | null;
+  }>;
+  contratos: Array<{
+    id: string;
+    orgao: string;
+    valor: number;
+    objeto: string;
+    data_inicio: string | null;
+    data_fim: string | null;
+  }>;
+  valor_total: number;
+  n_contratos: number;
+};
+
 export type GrafoD3 = {
   nodes: Array<{ id: string; kind: string; label: string; [k: string]: any }>;
   links: Array<{ source: string; target: string; kind: string; [k: string]: any }>;

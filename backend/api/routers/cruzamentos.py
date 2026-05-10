@@ -77,6 +77,84 @@ def empresa_sancionada(db: Session = Depends(get_db)):
     return [EmpresaSancionadaContrato(**dict(r._mapping)) for r in rows]
 
 
+@router.get("/casos")
+def casos(
+    limite: int = Query(50, ge=1, le=500),
+    valor_min: float = Query(0, description="filtrar contratos abaixo desse valor"),
+    db: Session = Depends(get_db),
+):
+    """Lista de 'casos' narrados — uma empresa sancionada + sua história.
+
+    Cada caso agrupa: identificação da empresa, sanção aplicada,
+    contratos federais (após ou apesar da sanção), valor total, link
+    pro Portal da Transparência. É a visão investigativa/jornalística.
+    """
+    empresas = db.execute(text("""
+        SELECT
+            e.cnpj,
+            e.razao_social,
+            COUNT(DISTINCT c.id) AS n_contratos,
+            COALESCE(SUM(c.valor), 0) AS valor_total
+          FROM empresas e
+          JOIN ceis ce ON ce.cnpj = e.cnpj
+          JOIN contratos_publicos c ON c.cnpj_fornecedor = e.cnpj
+         WHERE c.valor >= :v
+         GROUP BY e.cnpj, e.razao_social
+         ORDER BY valor_total DESC
+         LIMIT :lim
+    """), {"lim": limite, "v": valor_min}).fetchall()
+
+    resultados = []
+    for emp in empresas:
+        sancoes = db.execute(text("""
+            SELECT tipo_sancao, orgao_sancionador,
+                   data_inicio_sancao, data_fim_sancao
+              FROM ceis
+             WHERE cnpj = :cnpj
+             ORDER BY data_inicio_sancao DESC
+        """), {"cnpj": emp.cnpj}).fetchall()
+
+        contratos = db.execute(text("""
+            SELECT id, orgao_contratante, valor, objeto,
+                   data_inicio, data_fim
+              FROM contratos_publicos
+             WHERE cnpj_fornecedor = :cnpj AND valor >= :v
+             ORDER BY valor DESC
+        """), {"cnpj": emp.cnpj, "v": valor_min}).fetchall()
+
+        cnpj_digitos = "".join(c for c in emp.cnpj if c.isdigit())
+        resultados.append({
+            "empresa": {
+                "cnpj": emp.cnpj,
+                "razao_social": emp.razao_social,
+                "link_transparencia": f"https://portaldatransparencia.gov.br/pessoa-juridica/{cnpj_digitos}",
+            },
+            "sancoes": [
+                {
+                    "tipo": s.tipo_sancao,
+                    "orgao_sancionador": s.orgao_sancionador,
+                    "inicio": s.data_inicio_sancao,
+                    "fim": s.data_fim_sancao,
+                }
+                for s in sancoes
+            ],
+            "contratos": [
+                {
+                    "id": c.id,
+                    "orgao": c.orgao_contratante,
+                    "valor": float(c.valor or 0),
+                    "objeto": c.objeto or "",
+                    "data_inicio": c.data_inicio,
+                    "data_fim": c.data_fim,
+                }
+                for c in contratos
+            ],
+            "valor_total": float(emp.valor_total),
+            "n_contratos": int(emp.n_contratos),
+        })
+    return resultados
+
+
 @router.get("/resumo")
 def resumo(db: Session = Depends(get_db)):
     """Contagens consolidadas dos cruzamentos."""
