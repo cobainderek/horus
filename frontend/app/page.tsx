@@ -1,4 +1,5 @@
 import { CasoCard } from "@/components/CasoCard";
+import { GlossarioSancoes } from "@/components/GlossarioSancoes";
 import { KPICard } from "@/components/KPICard";
 import {
   apiGet,
@@ -44,12 +45,13 @@ export default async function Page() {
         <p className="text-dim text-xs mb-4">
           fonte: portal da transparência (cgu) · cruzamento entre cadastro de empresas inidôneas/suspensas (ceis) e contratos federais ativos
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <KPICard label="empresas sancionadas" value={fmtNum(kpis.total_sancoes)} />
           <KPICard label="contratos detectados" value={fmtNum(kpis.total_contratos)} />
           <KPICard label="casos irregulares" value={fmtNum(kpis.total_irregularidades)} alert />
           <KPICard label="dinheiro público suspeito" value={fmtBRL(kpis.valor_contratos_suspeitos)} alert />
         </div>
+        <GlossarioSancoes />
       </section>
 
       {casos.length === 0 ? (
