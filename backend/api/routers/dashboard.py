@@ -28,8 +28,8 @@ def kpis(db: Session = Depends(get_db)):
           JOIN contratos_publicos c ON c.cnpj_fornecedor = d.cnpj_doador
     """)).scalar() or 0
     c5 = db.execute(text("""
-        SELECT COUNT(*) FROM ceis ce
-          JOIN contratos_publicos c ON c.cnpj_fornecedor = ce.cnpj
+        SELECT COUNT(DISTINCT c.id) FROM contratos_publicos c
+         WHERE EXISTS (SELECT 1 FROM ceis ce WHERE ce.cnpj = c.cnpj_fornecedor)
     """)).scalar() or 0
 
     valor_suspeito = db.execute(text("""
