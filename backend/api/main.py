@@ -11,6 +11,8 @@ from .routers import busca, cruzamentos, dashboard, grafo, ml, nlp
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    from .database import aplicar_migrations
+    aplicar_migrations()
     yield
 
 

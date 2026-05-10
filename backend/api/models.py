@@ -48,6 +48,11 @@ class ContratoPublico(Base):
     data_inicio = Column(String(10))
     data_fim = Column(String(10))
     objeto = Column(Text)
+    valor_inicial = Column(Float)
+    valor_final = Column(Float)
+    modalidade = Column(String(100))
+    numero_processo = Column(String(100))
+    data_assinatura = Column(String(10))
 
     empresa = relationship("Empresa", back_populates="contratos")
 
@@ -61,8 +66,33 @@ class CEIS(Base):
     data_inicio_sancao = Column(String(10))
     data_fim_sancao = Column(String(10))
     orgao_sancionador = Column(String(200))
+    fundamentacao = Column(Text)
+    numero_processo = Column(String(100))
 
     empresa = relationship("Empresa", back_populates="sancoes")
+
+
+class DadosCadastrais(Base):
+    """Snapshot da Receita Federal (via BrasilAPI) para cada empresa."""
+    __tablename__ = "dados_cadastrais"
+
+    cnpj = Column(String(18), ForeignKey("empresas.cnpj"), primary_key=True)
+    nome_fantasia = Column(String(300))
+    situacao_cadastral = Column(String(50))
+    data_inicio_atividade = Column(String(10))
+    capital_social = Column(Float)
+    porte = Column(String(100))
+    natureza_juridica = Column(String(200))
+    cnae_descricao = Column(String(300))
+    cnae_codigo = Column(String(20))
+    logradouro = Column(String(200))
+    numero = Column(String(20))
+    municipio = Column(String(100))
+    uf = Column(String(2))
+    telefone = Column(String(50))
+    email = Column(String(200))
+    opcao_simples = Column(Integer, default=0)
+    atualizado_em = Column(String(10))
 
 
 class DoacaoEleitoral(Base):

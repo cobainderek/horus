@@ -33,10 +33,13 @@ RAW_DIR = ROOT / "data" / "raw"
 COLUNAS_CEIS = [
     "cnpj", "razao_social", "tipo_sancao",
     "data_inicio_sancao", "data_fim_sancao", "orgao_sancionador",
+    "fundamentacao", "numero_processo",
 ]
 COLUNAS_CONTRATO = [
     "id", "cnpj_fornecedor", "razao_social", "orgao_contratante",
-    "valor", "data_inicio", "data_fim", "objeto",
+    "valor", "valor_inicial", "valor_final", "modalidade",
+    "data_inicio", "data_fim", "data_assinatura", "numero_processo",
+    "objeto",
 ]
 
 
@@ -121,6 +124,8 @@ def parse_ceis(item: dict) -> dict | None:
         "data_inicio_sancao": _data_br_iso(item.get("dataInicioSancao")) or "",
         "data_fim_sancao": _data_br_iso(item.get("dataFimSancao")) or "",
         "orgao_sancionador": (item.get("orgaoSancionador") or {}).get("nome", "")[:200],
+        "fundamentacao": (item.get("fundamentacao") or "")[:2000],
+        "numero_processo": (item.get("numeroProcesso") or "")[:100],
     }
 
 
@@ -133,7 +138,11 @@ def parse_contrato(item: dict) -> dict | None:
     orgao_max = unidade.get("orgaoMaximo") or {}
     orgao_vinc = unidade.get("orgaoVinculado") or {}
     orgao_nome = (orgao_max.get("nome") or orgao_vinc.get("nome") or "").strip()
-    valor = item.get("valorFinalCompra") or item.get("valorInicialCompra") or 0.0
+    valor_inicial = item.get("valorInicialCompra") or 0.0
+    valor_final = item.get("valorFinalCompra") or 0.0
+    # `valor` (legado) é sempre o valor final efetivo
+    valor = valor_final or valor_inicial
+    compra = item.get("compra") or {}
     return {
         "id": str(item.get("id") or "")[:20],
         "cnpj_fornecedor": cnpj,
@@ -142,8 +151,13 @@ def parse_contrato(item: dict) -> dict | None:
         ).strip()[:300],
         "orgao_contratante": orgao_nome[:200] or "(sem informação)",
         "valor": str(float(valor)),
+        "valor_inicial": str(float(valor_inicial)),
+        "valor_final": str(float(valor_final)),
+        "modalidade": (item.get("modalidadeCompra") or "")[:100],
         "data_inicio": (item.get("dataInicioVigencia") or "")[:10],
         "data_fim": (item.get("dataFimVigencia") or "")[:10],
+        "data_assinatura": (item.get("dataAssinatura") or "")[:10],
+        "numero_processo": (compra.get("numeroProcesso") or item.get("numeroProcesso") or "")[:100],
         "objeto": (item.get("objeto") or "")[:2000],
     }
 
@@ -233,65 +247,82 @@ def _upsert_empresa(db: Session, cnpj: str, razao: str) -> None:
 
 
 def carregar_ceis_csv(db: Session, csv_path: Path | None = None) -> dict:
-    """Lê CSV de CEIS e faz upsert no banco. Não chama a API."""
+    """Lê CSV de CEIS e faz upsert (insert OU update) no banco."""
     path = csv_path or path_ceis_csv()
     if not path.exists():
         raise FileNotFoundError(f"CSV não encontrado: {path}")
 
-    inseridos = duplicados = 0
+    inseridos = atualizados = 0
     with open(path, encoding="utf-8", newline="") as fh:
         for row in csv.DictReader(fh):
             inicio = row["data_inicio_sancao"] or None
             tipo = row["tipo_sancao"] or ""
-            ja = db.query(CEIS).filter(
+            existente = db.query(CEIS).filter(
                 CEIS.cnpj == row["cnpj"],
                 CEIS.data_inicio_sancao == inicio,
                 CEIS.tipo_sancao == tipo,
             ).first()
-            if ja:
-                duplicados += 1
-                continue
-            _upsert_empresa(db, row["cnpj"], row["razao_social"])
-            db.add(CEIS(
-                cnpj=row["cnpj"],
-                razao_social=row["razao_social"],
-                tipo_sancao=tipo,
-                data_inicio_sancao=inicio,
-                data_fim_sancao=row["data_fim_sancao"] or None,
-                orgao_sancionador=row["orgao_sancionador"],
-            ))
-            inseridos += 1
+            extras = {
+                "fundamentacao": row.get("fundamentacao") or None,
+                "numero_processo": row.get("numero_processo") or None,
+                "data_fim_sancao": row["data_fim_sancao"] or None,
+                "orgao_sancionador": row["orgao_sancionador"],
+            }
+            if existente:
+                for k, v in extras.items():
+                    setattr(existente, k, v)
+                atualizados += 1
+            else:
+                _upsert_empresa(db, row["cnpj"], row["razao_social"])
+                db.add(CEIS(
+                    cnpj=row["cnpj"],
+                    razao_social=row["razao_social"],
+                    tipo_sancao=tipo,
+                    data_inicio_sancao=inicio,
+                    **extras,
+                ))
+                inseridos += 1
     db.commit()
-    return {"csv": str(path), "inseridos": inseridos, "duplicados": duplicados}
+    return {"csv": str(path), "inseridos": inseridos, "atualizados": atualizados}
 
 
 def carregar_contratos_csv(db: Session, csv_path: Path | None = None) -> dict:
-    """Lê CSV de contratos e faz upsert no banco."""
+    """Lê CSV de contratos e faz upsert (insert OU update) no banco."""
     path = csv_path or path_contratos_csv()
     if not path.exists():
         raise FileNotFoundError(f"CSV não encontrado: {path}")
 
-    inseridos = duplicados = 0
+    inseridos = atualizados = 0
     with open(path, encoding="utf-8", newline="") as fh:
         for row in csv.DictReader(fh):
             if not row["id"]:
                 continue
-            if db.query(ContratoPublico).filter(ContratoPublico.id == row["id"]).first():
-                duplicados += 1
-                continue
-            _upsert_empresa(db, row["cnpj_fornecedor"], row["razao_social"])
-            db.add(ContratoPublico(
-                id=row["id"],
-                cnpj_fornecedor=row["cnpj_fornecedor"],
-                orgao_contratante=row["orgao_contratante"],
-                valor=float(row["valor"] or 0),
-                data_inicio=row["data_inicio"] or None,
-                data_fim=row["data_fim"] or None,
-                objeto=row["objeto"] or None,
-            ))
-            inseridos += 1
+            dados = {
+                "cnpj_fornecedor": row["cnpj_fornecedor"],
+                "orgao_contratante": row["orgao_contratante"],
+                "valor": float(row["valor"] or 0),
+                "valor_inicial": float(row.get("valor_inicial") or 0) or None,
+                "valor_final": float(row.get("valor_final") or 0) or None,
+                "modalidade": row.get("modalidade") or None,
+                "data_inicio": row["data_inicio"] or None,
+                "data_fim": row["data_fim"] or None,
+                "data_assinatura": row.get("data_assinatura") or None,
+                "numero_processo": row.get("numero_processo") or None,
+                "objeto": row["objeto"] or None,
+            }
+            existente = db.query(ContratoPublico).filter(
+                ContratoPublico.id == row["id"]
+            ).first()
+            if existente:
+                for k, v in dados.items():
+                    setattr(existente, k, v)
+                atualizados += 1
+            else:
+                _upsert_empresa(db, row["cnpj_fornecedor"], row["razao_social"])
+                db.add(ContratoPublico(id=row["id"], **dados))
+                inseridos += 1
     db.commit()
-    return {"csv": str(path), "inseridos": inseridos, "duplicados": duplicados}
+    return {"csv": str(path), "inseridos": inseridos, "atualizados": atualizados}
 
 
 # ─── WRAPPERS DE COMPATIBILIDADE (usados pelo Celery e tasks legadas) ───

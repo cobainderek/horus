@@ -41,12 +41,27 @@ export type DistribuicaoSancao = {
   quantidade: number;
 };
 
+export type Cadastro = {
+  nome_fantasia: string | null;
+  situacao_cadastral: string | null;
+  data_inicio_atividade: string | null;
+  capital_social: number | null;
+  porte: string | null;
+  natureza_juridica: string | null;
+  cnae_descricao: string | null;
+  municipio: string | null;
+  uf: string | null;
+  opcao_simples: boolean | null;
+};
+
 export type Caso = {
   empresa: {
     cnpj: string;
     razao_social: string;
     link_transparencia: string;
   };
+  cadastro: Cadastro | null;
+  socios: Array<{ nome: string; qualificacao: string | null }>;
   sancoes: Array<{
     tipo: string;
     orgao_sancionador: string;
@@ -57,12 +72,19 @@ export type Caso = {
     id: string;
     orgao: string;
     valor: number;
+    valor_inicial: number | null;
+    valor_final: number | null;
+    modalidade: string | null;
     objeto: string;
     data_inicio: string | null;
     data_fim: string | null;
+    data_assinatura: string | null;
+    tem_aditivo_abusivo: boolean;
+    crescimento_pct: number | null;
   }>;
   valor_total: number;
   n_contratos: number;
+  n_aditivos_abusivos: number;
 };
 
 export type GrafoD3 = {

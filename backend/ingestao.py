@@ -29,14 +29,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .api import models  # noqa: F401 — registra tabelas em Base.metadata
-from .api.database import Base, SessionLocal, engine
-from .ingestao_lib import cgu
+from .api.database import Base, SessionLocal, aplicar_migrations, engine
+from .ingestao_lib import brasilapi, cgu
 
 load_dotenv()
 
 
 def _setup_db() -> None:
     Base.metadata.create_all(bind=engine)
+    aplicar_migrations()
 
 
 # ─── baixar (API → CSV) ───────────────────────────────────────────────────
@@ -77,6 +78,25 @@ def cmd_carregar_contratos(args) -> dict:
     path = Path(args.csv) if args.csv else None
     with SessionLocal() as db:
         return cgu.carregar_contratos_csv(db, path)
+
+
+def cmd_baixar_empresas(args) -> dict:
+    from .api.models import Empresa
+    with SessionLocal() as db:
+        cnpjs = [c[0] for c in db.query(Empresa.cnpj).distinct().all()]
+    if args.max_empresas:
+        cnpjs = cnpjs[: args.max_empresas]
+    print(f"  → baixando dados de {len(cnpjs)} empresas via BrasilAPI...")
+    return brasilapi.baixar_empresas_csv(cnpjs, sleep_segundos=args.sleep)
+
+
+def cmd_carregar_empresas(args) -> dict:
+    emp_path = Path(args.csv_empresas) if args.csv_empresas else None
+    soc_path = Path(args.csv_socios) if args.csv_socios else None
+    with SessionLocal() as db:
+        r_emp = brasilapi.carregar_empresas_csv(db, emp_path)
+        r_soc = brasilapi.carregar_socios_csv(db, soc_path)
+    return {"empresas": r_emp, "socios": r_soc}
 
 
 # ─── tudo (fluxo completo) ────────────────────────────────────────────────
@@ -190,6 +210,17 @@ def main() -> None:
     p = sub.add_parser("carregar-contratos", help="carrega data/raw/contratos_*.csv no banco")
     p.add_argument("--csv", default=None)
     p.set_defaults(func=cmd_carregar_contratos)
+
+    # bronze/silver BrasilAPI
+    p = sub.add_parser("baixar-empresas", help="baixa dados cadastrais da Receita (BrasilAPI) e grava CSV + sócios")
+    p.add_argument("--max-empresas", type=int, default=None)
+    p.add_argument("--sleep", type=float, default=0.5)
+    p.set_defaults(func=cmd_baixar_empresas)
+
+    p = sub.add_parser("carregar-empresas", help="carrega data/raw/empresas_brasilapi_*.csv + socios_*.csv")
+    p.add_argument("--csv-empresas", default=None)
+    p.add_argument("--csv-socios", default=None)
+    p.set_defaults(func=cmd_carregar_empresas)
 
     # fluxo completo
     p = sub.add_parser("tudo", help="fluxo completo: baixar CEIS → carregar → baixar contratos → carregar")

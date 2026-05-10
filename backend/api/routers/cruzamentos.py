@@ -116,20 +116,76 @@ def casos(
         """), {"cnpj": emp.cnpj}).fetchall()
 
         contratos = db.execute(text("""
-            SELECT id, orgao_contratante, valor, objeto,
-                   data_inicio, data_fim
+            SELECT id, orgao_contratante, valor, valor_inicial, valor_final,
+                   modalidade, objeto, data_inicio, data_fim, data_assinatura
               FROM contratos_publicos
              WHERE cnpj_fornecedor = :cnpj AND valor >= :v
              ORDER BY valor DESC
         """), {"cnpj": emp.cnpj, "v": valor_min}).fetchall()
 
+        cadastro = db.execute(text("""
+            SELECT nome_fantasia, situacao_cadastral, data_inicio_atividade,
+                   capital_social, porte, natureza_juridica,
+                   cnae_codigo, cnae_descricao,
+                   municipio, uf, opcao_simples
+              FROM dados_cadastrais
+             WHERE cnpj = :cnpj
+        """), {"cnpj": emp.cnpj}).fetchone()
+
+        socios_rows = db.execute(text("""
+            SELECT nome_socio, qualificacao
+              FROM socios_empresa
+             WHERE cnpj_empresa = :cnpj
+             ORDER BY id
+        """), {"cnpj": emp.cnpj}).fetchall()
+
         cnpj_digitos = "".join(c for c in emp.cnpj if c.isdigit())
+
+        contratos_dict = []
+        for c in contratos:
+            vi = float(c.valor_inicial or 0)
+            vf = float(c.valor_final or c.valor or 0)
+            tem_aditivo_abusivo = vi > 0 and vf > vi * 1.5
+            crescimento = ((vf / vi - 1) * 100) if vi > 0 else None
+            contratos_dict.append({
+                "id": c.id,
+                "orgao": c.orgao_contratante,
+                "valor": float(c.valor or 0),
+                "valor_inicial": vi or None,
+                "valor_final": vf or None,
+                "modalidade": c.modalidade,
+                "objeto": c.objeto or "",
+                "data_inicio": c.data_inicio,
+                "data_fim": c.data_fim,
+                "data_assinatura": c.data_assinatura,
+                "tem_aditivo_abusivo": tem_aditivo_abusivo,
+                "crescimento_pct": round(crescimento, 1) if crescimento is not None else None,
+            })
+
+        n_aditivos = sum(1 for c in contratos_dict if c["tem_aditivo_abusivo"])
+
         resultados.append({
             "empresa": {
                 "cnpj": emp.cnpj,
                 "razao_social": emp.razao_social,
                 "link_transparencia": f"https://portaldatransparencia.gov.br/pessoa-juridica/{cnpj_digitos}",
             },
+            "cadastro": {
+                "nome_fantasia": cadastro.nome_fantasia if cadastro else None,
+                "situacao_cadastral": cadastro.situacao_cadastral if cadastro else None,
+                "data_inicio_atividade": cadastro.data_inicio_atividade if cadastro else None,
+                "capital_social": float(cadastro.capital_social or 0) if cadastro and cadastro.capital_social else None,
+                "porte": cadastro.porte if cadastro else None,
+                "natureza_juridica": cadastro.natureza_juridica if cadastro else None,
+                "cnae_descricao": cadastro.cnae_descricao if cadastro else None,
+                "municipio": cadastro.municipio if cadastro else None,
+                "uf": cadastro.uf if cadastro else None,
+                "opcao_simples": bool(cadastro.opcao_simples) if cadastro else None,
+            } if cadastro else None,
+            "socios": [
+                {"nome": s.nome_socio, "qualificacao": s.qualificacao}
+                for s in socios_rows
+            ],
             "sancoes": [
                 {
                     "tipo": s.tipo_sancao,
@@ -139,19 +195,10 @@ def casos(
                 }
                 for s in sancoes
             ],
-            "contratos": [
-                {
-                    "id": c.id,
-                    "orgao": c.orgao_contratante,
-                    "valor": float(c.valor or 0),
-                    "objeto": c.objeto or "",
-                    "data_inicio": c.data_inicio,
-                    "data_fim": c.data_fim,
-                }
-                for c in contratos
-            ],
+            "contratos": contratos_dict,
             "valor_total": float(emp.valor_total),
             "n_contratos": int(emp.n_contratos),
+            "n_aditivos_abusivos": n_aditivos,
         })
     return resultados
 
