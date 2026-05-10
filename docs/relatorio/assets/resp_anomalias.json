@@ -1,0 +1,47 @@
+[
+    {
+        "cnpj": "15.649.677/0001-22",
+        "razao_social": "MATOS EQUIPAMENTOS HOSPITALARES LTDA",
+        "anomaly_score": -0.15084839260408156,
+        "is_anomaly": true,
+        "features": {
+            "num_contratos": 3.0,
+            "valor_total_contratos": 13663700.78,
+            "valor_max_contrato": 6813188.6,
+            "num_orgaos_distintos": 3.0,
+            "num_socios": 3.0,
+            "num_sancoes_ceis": 1.0,
+            "num_doacoes_realizadas": 1.0
+        }
+    },
+    {
+        "cnpj": "08.900.850/0001-58",
+        "razao_social": "ATIVA TERCEIRIZACAO LTDA",
+        "anomaly_score": -0.12804709296624428,
+        "is_anomaly": true,
+        "features": {
+            "num_contratos": 15.0,
+            "valor_total_contratos": 10907788.169999998,
+            "valor_max_contrato": 2317746.94,
+            "num_orgaos_distintos": 3.0,
+            "num_socios": 0.0,
+            "num_sancoes_ceis": 1.0,
+            "num_doacoes_realizadas": 0.0
+        }
+    },
+    {
+        "cnpj": "71.296.594/0001-78",
+        "razao_social": "PINTO TECNOLOGIA ME",
+        "anomaly_score": -0.11570661585172726,
+        "is_anomaly": true,
+        "features": {
+            "num_contratos": 3.0,
+            "valor_total_contratos": 14941692.740000002,
+            "valor_max_contrato": 7842615.69,
+            "num_orgaos_distintos": 3.0,
+            "num_socios": 0.0,
+            "num_sancoes_ceis": 0.0,
+            "num_doacoes_realizadas": 1.0
+        }
+    }
+]

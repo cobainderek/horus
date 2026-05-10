@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Hórus — Relatório de Implementação · 06/05/2026</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1f2937;
+    background: #fff;
+  }
+  h1, h2, h3, h4 { color: #0b3d2e; margin: 0 0 10px; line-height: 1.25; }
+  h1 { font-size: 30pt; }
+  h2 {
+    font-size: 18pt;
+    border-bottom: 3px solid #0b3d2e;
+    padding-bottom: 6px;
+    margin: 28px 0 14px;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 13pt; color: #14532d; margin-top: 18px; }
+  h4 { font-size: 11pt; color: #166534; margin-top: 10px; }
+  p { margin: 6px 0 10px; }
+  code {
+    font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9.2pt;
+    color: #be185d;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 8.8pt;
+    line-height: 1.45;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    page-break-inside: avoid;
+  }
+  pre.json { color: #fef3c7; }
+  pre.json .k { color: #93c5fd; }
+  pre.json .s { color: #86efac; }
+  pre.json .n { color: #fdba74; }
+
+  /* Capa */
+  .capa {
+    height: 257mm;
+    background: linear-gradient(135deg, #064e3b 0%, #0b3d2e 50%, #052e1f 100%);
+    color: #fff;
+    padding: 40mm 18mm 0;
+    page-break-after: always;
+    position: relative;
+  }
+  .capa .olho { font-size: 110pt; line-height: 1; margin-bottom: 12mm; }
+  .capa h1 { color: #fff; font-size: 46pt; letter-spacing: -1px; }
+  .capa .sub { font-size: 14pt; color: #a7f3d0; font-weight: 300; margin-top: 4mm; }
+  .capa .meta {
+    position: absolute; bottom: 35mm; left: 18mm; right: 18mm;
+    border-top: 2px solid #34d399; padding-top: 6mm;
+    display: flex; justify-content: space-between;
+    font-size: 11pt; color: #d1fae5;
+  }
+  .capa .badge {
+    display: inline-block; background: #10b981; color: #052e1f;
+    padding: 4px 12px; border-radius: 4px; font-weight: 700;
+    font-size: 10pt; margin-top: 8mm;
+  }
+
+  /* Componentes */
+  .box {
+    border-left: 4px solid #10b981;
+    background: #ecfdf5;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .box.warn { border-color: #f59e0b; background: #fffbeb; }
+  .box.danger { border-color: #ef4444; background: #fef2f2; }
+  .box.info { border-color: #3b82f6; background: #eff6ff; }
+  .box-title { font-weight: 700; color: #065f46; margin-bottom: 4px; }
+  .box.warn .box-title { color: #92400e; }
+  .box.danger .box-title { color: #991b1b; }
+  .box.info .box-title { color: #1e40af; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+  th { background: #0b3d2e; color: #fff; font-weight: 600; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.4px; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", Consolas, monospace; }
+  td.tag { font-weight: 600; }
+
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    margin: 12px 0;
+  }
+  .kpi {
+    background: #fff; border: 1px solid #d1d5db; border-radius: 8px;
+    padding: 12px; text-align: center;
+  }
+  .kpi .v { font-size: 22pt; font-weight: 800; color: #0b3d2e; line-height: 1; }
+  .kpi .l { font-size: 8.5pt; color: #6b7280; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
+
+  .step {
+    display: flex; gap: 14px; margin: 12px 0; align-items: flex-start;
+    page-break-inside: avoid;
+  }
+  .step .num {
+    flex: 0 0 36px; height: 36px; border-radius: 50%;
+    background: #10b981; color: #fff; display: flex; align-items: center;
+    justify-content: center; font-weight: 800; font-size: 14pt;
+  }
+  .step .body { flex: 1; }
+  .step h4 { margin-top: 4px; }
+
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 8.5pt; font-weight: 600; margin-right: 4px;
+  }
+  .pill.ok { background: #d1fae5; color: #065f46; }
+  .pill.todo { background: #fee2e2; color: #991b1b; }
+  .pill.partial { background: #fef3c7; color: #92400e; }
+  .pill.method-get { background: #dbeafe; color: #1e40af; }
+  .pill.method-post { background: #fef3c7; color: #92400e; }
+
+  .arch {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 14px; font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 8.8pt; line-height: 1.6; color: #374151;
+    white-space: pre; overflow: hidden;
+    page-break-inside: avoid;
+  }
+
+  .screenshot {
+    width: 100%; border: 1px solid #cbd5e1; border-radius: 8px;
+    margin: 10px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  .quote {
+    font-style: italic; color: #475569; border-left: 3px solid #94a3b8;
+    padding-left: 12px; margin: 10px 0;
+  }
+
+  .tag-real { background:#dcfce7; color:#166534; padding:1px 6px; border-radius:3px; font-size:8.5pt; font-weight:700; }
+  .tag-mock { background:#fce7f3; color:#9d174d; padding:1px 6px; border-radius:3px; font-size:8.5pt; font-weight:700; }
+
+  .secao { page-break-inside: avoid; }
+  .quebra { page-break-before: always; }
+
+  ul, ol { margin: 4px 0 10px; padding-left: 22px; }
+  li { margin: 3px 0; }
+
+  .footer-num {
+    position: fixed; bottom: 8mm; right: 16mm;
+    font-size: 8pt; color: #94a3b8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== CAPA ===================== -->
+<section class="capa">
+  <div class="olho">👁️</div>
+  <h1>Hórus</h1>
+  <div class="sub">Sistema Inteligente de Fiscalização de Dados Públicos</div>
+  <div class="badge">RELATÓRIO DE IMPLEMENTAÇÃO</div>
+
+  <div class="meta">
+    <div>
+      <strong>Derek Cobain</strong><br>
+      TADS · FAESA · Projeto Integrador III<br>
+      Prof. Howard Cruz
+    </div>
+    <div style="text-align:right;">
+      <strong>06 de maio de 2026</strong><br>
+      Entrega 2 — Protótipo Funcional<br>
+      v0.2.0
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 1. RESUMO EXECUTIVO ===================== -->
+<section class="secao">
+<h2>1. O que é o Hórus (em 1 minuto)</h2>
+
+<p>
+O <strong>Hórus</strong> é um sistema que <strong>cruza bases de dados públicas brasileiras</strong> para descobrir
+irregularidades que ninguém vê quando olha as bases isoladamente. A ideia é simples: cada portal do governo
+(Portal da Transparência, Receita, TSE, CEIS, TCU, Diário Oficial) é um pedaço de quebra-cabeça. Sozinhos, eles
+não dizem muita coisa. Juntos, denunciam o que está errado.
+</p>
+
+<div class="box">
+<div class="box-title">📌 Exemplo do mundo real (descoberto hoje pelo sistema)</div>
+A empresa <strong>ATIVA TERCEIRIZACAO LTDA</strong> está no <strong>CEIS</strong> (Cadastro de Empresas
+Inidôneas e Suspensas) — ou seja, foi <em>oficialmente proibida de fazer negócio com o governo</em>. Ainda
+assim, a base de contratos federais mostra que ela tem <strong>R$ 2,3 milhões</strong> em contrato com o
+<strong>Ministério da Saúde</strong>. Esse é o tipo de furo que o Hórus detecta automaticamente, e é o
+exemplo mais limpo do porquê <em>a fragmentação entre portais públicos permite que irregularidades passem
+despercebidas</em>.
+</div>
+
+<h3>🎯 Cinco cruzamentos que o sistema faz (espinha dorsal do projeto)</h3>
+<table>
+<tr><th>#</th><th>Cruzamento</th><th>O que detecta</th><th>Status hoje</th></tr>
+<tr><td>1</td><td>Político → sócio de empresa → contrato</td><td>Conflito de interesse direto</td><td><span class="pill ok">Implementado</span></td></tr>
+<tr><td>2</td><td>Doador de campanha → contrato</td><td>Retorno de favor</td><td><span class="pill ok">Implementado</span></td></tr>
+<tr><td>3</td><td>Familiar de servidor → empresa contratada</td><td>Nepotismo / testa-de-ferro</td><td><span class="pill todo">Pendente</span></td></tr>
+<tr><td>4</td><td>Patrimônio declarado vs salário</td><td>Enriquecimento ilícito</td><td><span class="pill todo">Pendente</span></td></tr>
+<tr><td>5</td><td>Empresa no CEIS → ainda tem contrato</td><td>Falha de fiscalização</td><td><span class="pill ok">Funcionando com dados reais</span></td></tr>
+</table>
+</section>
+
+<!-- ===================== 2. STACK ===================== -->
+<section class="secao quebra">
+<h2>2. Stack tecnológica</h2>
+<p>O projeto foi desenhado em camadas, cada uma com uma ferramenta dedicada. A tabela abaixo mostra <strong>o que está instalado e funcionando hoje</strong>:</p>
+
+<table>
+<tr><th>Camada</th><th>Tecnologia</th><th>Para quê serve</th><th>Status</th></tr>
+<tr><td>API HTTP</td><td>FastAPI 0.115 + Uvicorn</td><td>Recebe requisições e devolve JSON</td><td><span class="pill ok">✓</span></td></tr>
+<tr><td>ORM</td><td>SQLAlchemy 2.0</td><td>Traduz objetos Python ↔ tabelas SQL</td><td><span class="pill ok">✓</span></td></tr>
+<tr><td>Banco</td><td>PostgreSQL 16 (Docker)</td><td>Armazena tudo</td><td><span class="pill ok">✓</span></td></tr>
+<tr><td>Validação</td><td>Pydantic 2</td><td>Garante que JSONs entrem e saiam no formato certo</td><td><span class="pill ok">✓</span></td></tr>
+<tr><td>HTTP client</td><td>httpx</td><td>Chamar APIs externas (CGU, Receita...)</td><td><span class="pill ok">✓</span></td></tr>
+<tr><td>Dataframes</td><td>Polars · Pandas</td><td>Manipulação de tabelas em memória</td><td><span class="pill ok">✓</span></td></tr>
+<tr><td>Machine Learning</td><td>scikit-learn (Isolation Forest)</td><td>Detecção de anomalias estatísticas</td><td><span class="pill ok">✓ instalado hoje</span></td></tr>
+<tr><td>Persistência ML</td><td>joblib</td><td>Salvar modelo treinado em disco</td><td><span class="pill ok">✓</span></td></tr>
+<tr><td>Filas async</td><td>Celery + Redis</td><td>Tarefas pesadas em background</td><td><span class="pill partial">Redis sim, Celery não</span></td></tr>
+<tr><td>Grafos</td><td>Apache AGE + NetworkX</td><td>Rede de relacionamentos</td><td><span class="pill todo">Pendente</span></td></tr>
+<tr><td>NLP</td><td>spaCy + Gemini API</td><td>Ler Diário Oficial automaticamente</td><td><span class="pill todo">Pendente</span></td></tr>
+<tr><td>Frontend</td><td>—</td><td>—</td><td><span class="pill todo">Desescopado (substituído por Swagger)</span></td></tr>
+<tr><td>Infra</td><td>Docker Compose</td><td>Sobe banco + redis em 1 comando</td><td><span class="pill ok">✓</span></td></tr>
+</table>
+
+<div class="box info">
+<div class="box-title">💡 Por que sem frontend?</div>
+Decisão tomada hoje (06/05/2026): o edital do PI III aceita <em>“análise de dados preliminar e modelos
+aplicados <strong>OU</strong> telas do sistema implementadas”</em>. Optamos por aprofundar backend +
+ciência de dados, usando o <strong>Swagger UI</strong> (que o FastAPI já gera automaticamente) como
+"painel" da aplicação.
+</div>
+
+</section>
+
+<!-- ===================== 3. ARQUITETURA ===================== -->
+<section class="secao quebra">
+<h2>3. Arquitetura — como as peças se encaixam</h2>
+
+<div class="arch">
+┌──────────────────────────────────────────────────────────────────────┐
+│                    APIs PÚBLICAS DO GOVERNO                          │
+│                                                                      │
+│   ┌──────────────┐  ┌──────────────────┐  ┌────────────────────┐    │
+│   │  CEIS (CGU)  │  │ Contratos (CGU)  │  │  TSE / Receita /   │    │
+│   │  empresas    │  │  contratos por   │  │  Diário Oficial    │    │
+│   │  sancionadas │  │  CNPJ            │  │  (a integrar)      │    │
+│   └──────┬───────┘  └────────┬─────────┘  └─────────┬──────────┘    │
+└──────────┼───────────────────┼───────────────────────┼──────────────┘
+           │ httpx              │ httpx                │
+           ▼                   ▼                       ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                       backend/app/ingestao/                          │
+│              portal_transparencia.py  (cliente HTTP CGU)             │
+│   • buscar_ceis()           → /ceis                                  │
+│   • buscar_contratos_por_cnpj() → /contratos/cpf-cnpj                │
+│   • parse_*  (normalização DD/MM → ISO, formatação)                  │
+│   • salvar_*  (upsert + dedupe natural)                              │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             ▼
+        ┌────────────────────────────────────────┐
+        │   PostgreSQL (Docker, porta 5433)      │
+        │   ┌─────────┐  ┌────────────────────┐  │
+        │   │empresas │──│ socios_empresa     │  │
+        │   └────┬────┘  └────────────────────┘  │
+        │        │       ┌────────────────────┐  │
+        │        ├───────│ contratos_publicos │  │
+        │        │       └────────────────────┘  │
+        │        │       ┌────────────────────┐  │
+        │        └───────│ ceis (sanções)     │  │
+        │                └────────────────────┘  │
+        │   ┌──────────────┐  ┌──────────────┐   │
+        │   │agentes_pub.  │  │ doacoes_elei │   │
+        │   └──────────────┘  └──────────────┘   │
+        └─────────────┬──────────────────────────┘
+                      ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                       backend/app/                                   │
+│                                                                      │
+│   analytics/score.py            → score determinístico (regras)      │
+│   analytics/isolation_forest.py → ML não-supervisionado (anomalias)  │
+│                                                                      │
+│   routers/                                                           │
+│   ├─ ingestao.py    POST /ingestao/ceis                              │
+│   │                 POST /ingestao/contratos-de-sancionados          │
+│   ├─ cruzamentos.py GET  /cruzamentos/conflito-interesse  (cruz. 1)  │
+│   │                 GET  /cruzamentos/retorno-favor       (cruz. 2)  │
+│   │                 GET  /cruzamentos/empresa-sancionada  (cruz. 5)  │
+│   │                 GET  /cruzamentos/resumo                         │
+│   ├─ ml.py          POST /ml/treinar                                 │
+│   │                 GET  /ml/anomalias                               │
+│   ├─ dashboard.py   GET  /dashboard/kpis                             │
+│   ├─ busca.py       GET  /busca/{cpf_ou_cnpj}                        │
+│   ├─ agentes.py     CRUD                                             │
+│   └─ empresas.py    CRUD                                             │
+└──────────────────────────────┬───────────────────────────────────────┘
+                               ▼
+                  ┌────────────────────────┐
+                  │   Swagger UI (/docs)   │
+                  │   Interface visual     │
+                  └────────────────────────┘
+</div>
+
+<div class="box">
+<div class="box-title">🧠 Leitura desse desenho para um leigo</div>
+De cima pra baixo, é um <strong>funil</strong>:
+<ol>
+  <li>O <strong>governo expõe APIs</strong> com dados públicos.</li>
+  <li>O <strong>módulo de ingestão</strong> chama essas APIs e traduz cada item para o nosso modelo de tabelas.</li>
+  <li>O <strong>banco PostgreSQL</strong> armazena tudo organizado, com relações entre as tabelas.</li>
+  <li>O <strong>módulo de analítica</strong> analisa os dados de duas formas: <em>regras explícitas</em> (score) e <em>aprendizado de máquina</em> (Isolation Forest).</li>
+  <li>Os <strong>routers</strong> expõem esses resultados como endpoints HTTP, e o <strong>Swagger UI</strong> deixa qualquer pessoa testar pelo navegador, sem precisar saber programar.</li>
+</ol>
+</div>
+</section>
+
+<!-- ===================== 4. O QUE FOI FEITO HOJE ===================== -->
+<section class="secao quebra">
+<h2>4. O que foi feito hoje (06/05/2026)</h2>
+
+<p>Cinco grandes blocos de trabalho, na ordem em que aconteceram:</p>
+
+<div class="step">
+  <div class="num">1</div>
+  <div class="body">
+    <h4>Subir a infraestrutura</h4>
+    <p>Os containers do Hórus (banco e Redis) estavam parados. Subimos com:</p>
+    <pre><code>docker compose up -d</code></pre>
+    <p>Resultado: <code>horus-db</code> (PostgreSQL na porta <code>5433</code>) e <code>horus-redis</code> (porta <code>6380</code>) ficaram <strong>healthy</strong>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">2</div>
+  <div class="body">
+    <h4>Validar a chave da API da CGU</h4>
+    <p>Você cadastrou em <code>portaldatransparencia.gov.br/api-de-dados/cadastrar</code> e colocou no
+    <code>backend/.env</code> a variável <code>API_PORTAL_TRANSPARENCIA_KEY</code>. A API exige essa chave
+    em todo header <code>chave-api-dados</code>. Sem ela, devolve <strong>401 Unauthorized</strong>.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">3</div>
+  <div class="body">
+    <h4>Disparar ingestão real do CEIS</h4>
+    <p>Chamamos <code>POST /ingestao/ceis?paginas=5</code>. O sistema:</p>
+    <ul>
+      <li>Bateu na API da CGU (5 páginas × 15 itens = 75 registros brutos)</li>
+      <li>Pulou pessoas físicas (modelo atual só armazena empresas)</li>
+      <li>Para cada CNPJ novo, criou a empresa no banco (<em>upsert</em>) e gravou o registro de sanção</li>
+      <li>Recalculou os scores</li>
+    </ul>
+    <p><strong>Resultado:</strong> 26 empresas sancionadas inseridas (somadas a 18 já existentes de antes = <strong>44 sanções reais</strong> + 31 PFs puladas).</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">4</div>
+  <div class="body">
+    <h4>Criar a "outra ponta" do cruzamento 5</h4>
+    <p>Saber que uma empresa está no CEIS é só metade da história. A outra metade é: <em>ela ainda tem
+    contrato federal ativo?</em> Implementamos:</p>
+    <ul>
+      <li><code>buscar_contratos_por_cnpj()</code> — usa o endpoint <code>/contratos/cpf-cnpj</code> da CGU</li>
+      <li><code>ingerir_contratos_de_sancionados()</code> — percorre <em>cada empresa do CEIS no banco</em>, chama a API e persiste os contratos encontrados</li>
+      <li><code>POST /ingestao/contratos-de-sancionados</code> — endpoint HTTP que dispara isso</li>
+    </ul>
+    <p>Disparamos para 20 empresas → <strong>38 contratos federais reais ingeridos</strong>. 5 das 20 empresas tinham contrato (25%) — e cada um desses é uma irregularidade direta.</p>
+    <p>Para isso foi necessário aumentar a coluna <code>contratos_publicos.id</code> de <code>VARCHAR(10)</code> para <code>VARCHAR(20)</code> (os IDs da CGU são longos).</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">5</div>
+  <div class="body">
+    <h4>Implementar o Isolation Forest</h4>
+    <p>O edital de PI III exige <strong>ciência de dados</strong> obrigatoriamente. O score que já existia é
+    <em>determinístico</em> — apenas regras tipo "se isso e aquilo, soma 30 pontos". Adicionamos um modelo
+    estatístico que <em>aprende</em> o que é "normal" e aponta o que foge da curva, mesmo quando nenhuma
+    regra dispara.</p>
+    <p><strong>Algoritmo:</strong> Isolation Forest do scikit-learn — não-supervisionado, ideal pra detecção
+    de anomalias quando você não tem rótulos.</p>
+    <p><strong>Features (variáveis usadas):</strong></p>
+    <ol>
+      <li>num_contratos</li>
+      <li>valor_total_contratos</li>
+      <li>valor_max_contrato</li>
+      <li>num_orgaos_distintos</li>
+      <li>num_socios</li>
+      <li>num_sancoes_ceis</li>
+      <li>num_doacoes_realizadas</li>
+    </ol>
+    <p>Endpoints: <code>POST /ml/treinar</code> (fit + persistência em joblib) e <code>GET /ml/anomalias</code>
+    (carrega modelo e aponta as N mais atípicas).</p>
+    <p><strong>Resultado:</strong> 15 anomalias detectadas em 144 empresas (com <em>contamination=0.1</em>).</p>
+  </div>
+</div>
+</section>
+
+<!-- ===================== 5. ENDPOINTS ===================== -->
+<section class="secao quebra">
+<h2>5. Endpoints disponíveis (lista completa)</h2>
+
+<p>São <strong>17 endpoints</strong> agrupados por finalidade. No Swagger eles ficam separados por "tags".</p>
+
+<h3>🟣 Ingestão de dados externos</h3>
+<table>
+<tr><th>Método</th><th>Endpoint</th><th>O que faz</th></tr>
+<tr><td><span class="pill method-post">POST</span></td><td><code>/ingestao/ceis</code></td><td>Puxa páginas do CEIS (CGU) e popula o banco com empresas sancionadas</td></tr>
+<tr><td><span class="pill method-post">POST</span></td><td><code>/ingestao/contratos-de-sancionados</code></td><td>Para cada empresa do CEIS no banco, busca contratos federais e ingere</td></tr>
+</table>
+
+<h3>🟢 Cruzamentos (o coração do Hórus)</h3>
+<table>
+<tr><th>Método</th><th>Endpoint</th><th>O que faz</th></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/cruzamentos/conflito-interesse</code></td><td>Cruzamento 1 — agente sócio de empresa que contrata com o próprio órgão</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/cruzamentos/retorno-favor</code></td><td>Cruzamento 2 — empresa que doou para campanha e ganhou contrato</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/cruzamentos/empresa-sancionada</code></td><td>Cruzamento 5 — empresa no CEIS com contrato ativo</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/cruzamentos/resumo</code></td><td>Contagem de cada tipo de irregularidade</td></tr>
+</table>
+
+<h3>🔵 Machine Learning</h3>
+<table>
+<tr><th>Método</th><th>Endpoint</th><th>O que faz</th></tr>
+<tr><td><span class="pill method-post">POST</span></td><td><code>/ml/treinar</code></td><td>Treina o Isolation Forest com as empresas atuais e persiste em disco</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/ml/anomalias</code></td><td>Roda o modelo e devolve as <em>top N</em> empresas mais atípicas</td></tr>
+</table>
+
+<h3>🟡 Dashboard, busca e CRUDs</h3>
+<table>
+<tr><th>Método</th><th>Endpoint</th><th>O que faz</th></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/dashboard/kpis</code></td><td>Indicadores agregados: total de irregularidades, valor suspeito, distribuição de risco</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/dashboard/top-riscos</code></td><td>Top agentes com maior score</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/dashboard/contratos-por-orgao</code></td><td>Soma de contratos suspeitos agrupada por ministério</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/busca/{cpf_ou_cnpj}</code></td><td>Busca unificada — descobre se é PF ou PJ e devolve tudo relacionado</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/agentes/</code> e <code>/agentes/{cpf}</code></td><td>Listar e detalhar agentes</td></tr>
+<tr><td><span class="pill method-get">GET</span></td><td><code>/empresas/</code> e <code>/empresas/{cnpj}</code></td><td>Listar e detalhar empresas</td></tr>
+</table>
+</section>
+
+<!-- ===================== 6. SWAGGER UI ===================== -->
+<section class="secao quebra">
+<h2>6. Como você vê isso (Swagger UI)</h2>
+
+<p>O FastAPI gera, automaticamente, uma página interativa em <code>http://127.0.0.1:8000/docs</code>.
+É ali que você "usa" o sistema sem precisar de terminal:</p>
+
+<ol>
+  <li>Clica no endpoint que quer testar (ex.: <code>GET /cruzamentos/empresa-sancionada</code>)</li>
+  <li>Aperta <strong>"Try it out"</strong> (canto superior direito do bloco)</li>
+  <li>Aperta <strong>"Execute"</strong> (botão azul grande)</li>
+  <li>Desce até <strong>"Response body"</strong> e vê o JSON formatado, com botão de copiar</li>
+</ol>
+
+<img class="screenshot" src="assets/swagger_overview.png" alt="Swagger UI do Hórus">
+
+<div class="box info">
+<div class="box-title">📂 Onde fica esse print no projeto</div>
+<code>docs/relatorio/assets/swagger_overview.png</code> (capturado headless via Chrome durante a geração deste relatório).
+</div>
+</section>
+
+<!-- ===================== 7. CASOS REAIS ===================== -->
+<section class="secao quebra">
+<h2>7. Casos reais detectados (não é demonstração — é dado vivo)</h2>
+
+<p>Após o cruzamento, o banco tem <strong>57 linhas</strong> no cruzamento 5. Abaixo, apenas os casos com <strong>origem 100% real</strong> (CNPJ vindo do CEIS da CGU + contrato vindo do endpoint <code>/contratos/cpf-cnpj</code>):</p>
+
+<table>
+<tr><th>CNPJ</th><th>Razão social</th><th>Sanção</th><th>Órgão contratante</th><th>Valor (R$)</th><th>Início</th></tr>
+<tr><td>08.900.850/0001-58</td><td><strong>ATIVA TERCEIRIZACAO LTDA</strong></td><td>Suspensão</td><td>Ministério da Saúde</td><td class="num">2.317.746,94</td><td>13/07/2022</td></tr>
+<tr><td>00.096.631/0001-56</td><td><strong>SANJUAN ENGENHARIA LTDA</strong></td><td>Suspensão</td><td>Ministério da Educação</td><td class="num">2.114.651,88</td><td>16/11/2012</td></tr>
+<tr><td>08.900.850/0001-58</td><td>ATIVA TERCEIRIZACAO LTDA</td><td>Suspensão</td><td>Ministério da Saúde</td><td class="num">1.927.806,93</td><td>02/05/2016</td></tr>
+<tr><td>08.900.850/0001-58</td><td>ATIVA TERCEIRIZACAO LTDA</td><td>Suspensão</td><td>Ministério da Educação</td><td class="num">1.163.938,68</td><td>16/11/2016</td></tr>
+<tr><td>08.900.850/0001-58</td><td>ATIVA TERCEIRIZACAO LTDA</td><td>Suspensão</td><td>Ministério da Educação</td><td class="num">1.134.013,43</td><td>27/05/2022</td></tr>
+</table>
+
+<div class="box danger">
+<div class="box-title">🚨 Por que isso é uma irregularidade</div>
+A <strong>Suspensão</strong> no CEIS é uma sanção que <strong>impede a empresa de licitar e contratar com a
+administração pública</strong> durante o período da pena. Cada linha acima é um contrato firmado <em>apesar
+disso</em> — exatamente o que o Hórus existe para apontar.
+</div>
+
+<h3>📊 Painel atual do banco (KPIs em tempo real)</h3>
+<div class="kpi-grid">
+  <div class="kpi"><div class="v">200</div><div class="l">Agentes públicos</div></div>
+  <div class="kpi"><div class="v">144</div><div class="l">Empresas</div></div>
+  <div class="kpi"><div class="v">118</div><div class="l">Contratos</div></div>
+  <div class="kpi"><div class="v">64</div><div class="l">Sanções CEIS</div></div>
+</div>
+<div class="kpi-grid">
+  <div class="kpi"><div class="v">88</div><div class="l">Irregularidades cruzadas</div></div>
+  <div class="kpi"><div class="v">15</div><div class="l">Anomalias (ML)</div></div>
+  <div class="kpi"><div class="v">R$ 161 mi</div><div class="l">Contratos suspeitos</div></div>
+  <div class="kpi"><div class="v">5</div><div class="l">Cruzamentos planejados</div></div>
+</div>
+
+<h3>🎲 Mock vs CGU — entenda a fonte de cada número</h3>
+<table>
+<tr><th>Tipo</th><th>O que é</th><th>Quem gera</th><th>Por que existe</th></tr>
+<tr><td><span class="tag-real">REAL</span></td><td>Dado verdadeiro vindo da CGU</td><td>Endpoints <code>/ceis</code> e <code>/contratos/cpf-cnpj</code> da API oficial</td><td>É o que o sistema deve detectar de fato</td></tr>
+<tr><td><span class="tag-mock">MOCK</span></td><td>Dado fictício gerado por código</td><td><code>backend/app/seed.py</code> (~250 registros plantados)</td><td>Permite desenvolver/testar sem internet e exibir cruzamentos 1 e 2 (que dependem de dados que ainda não temos via API)</td></tr>
+</table>
+</section>
+
+<!-- ===================== 8. ISOLATION FOREST EM DETALHE ===================== -->
+<section class="secao quebra">
+<h2>8. Isolation Forest — o "ML" do projeto, explicado simples</h2>
+
+<h3>🤔 Para que serve, em uma frase?</h3>
+<p>Apontar empresas que estão estatisticamente <em>fora do padrão</em> mesmo quando nenhuma regra fixa
+dispara. É um detector de "isso aqui está estranho, vai que o avaliador humano olha".</p>
+
+<h3>⚙️ Como funciona, em uma analogia</h3>
+<p>Imagine que você joga 200 empresas em uma <strong>floresta de árvores aleatórias</strong>. Cada árvore tenta
+"isolar" cada empresa fazendo perguntas binárias (valor maior que X? número de órgãos maior que Y?...).
+Empresas <em>normais</em> precisam de muitas perguntas pra serem isoladas (ficam "no meio do bolo"). Empresas
+<em>anômalas</em> são isoladas com poucas perguntas (têm valores extremos). O algoritmo mede isso e pontua.</p>
+
+<h3>🏆 Top 3 anomalias detectadas hoje</h3>
+<table>
+<tr><th>#</th><th>Empresa</th><th>Score</th><th>Por que ficou estranha</th></tr>
+<tr>
+  <td>1</td>
+  <td>MATOS EQUIPAMENTOS HOSPITALARES LTDA</td>
+  <td class="num">-0.151</td>
+  <td>Combo raro: poucos contratos (3) mas valor alto (R$ 13,6 mi), em 3 órgãos diferentes, com 1 sanção CEIS e 1 doação</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>ATIVA TERCEIRIZACAO LTDA</td>
+  <td class="num">-0.128</td>
+  <td>Nome real do CEIS — 15 contratos federais (volume alto) com 0 sócios cadastrados (suspeito) e suspensa</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>PINTO TECNOLOGIA ME</td>
+  <td class="num">-0.116</td>
+  <td>3 contratos somando R$ 14,9 mi (ticket médio enorme), 0 sócios e doadora eleitoral</td>
+</tr>
+</table>
+
+<div class="box">
+<div class="box-title">💡 O ponto-chave do ML neste projeto</div>
+O Isolation Forest <strong>complementa</strong> o score determinístico — ele captura padrões que as regras
+não enxergam. O caso da <strong>BARROS COMÉRCIO</strong> (não está nas top 3 mas apareceu nas 15 anomalias)
+é o exemplo perfeito: empresa com <em>zero contratos</em> e <em>três doações eleitorais</em>. Nenhuma regra
+do score determinístico pega isso, porque o score só penaliza quem ganhou contrato. O ML pega.
+</div>
+</section>
+
+<!-- ===================== 9. COMO RODAR ===================== -->
+<section class="secao quebra">
+<h2>9. Como rodar a aplicação do zero</h2>
+
+<h3>Pré-requisitos</h3>
+<ul>
+  <li>Docker + Docker Compose</li>
+  <li>Python 3.11+ com <code>venv</code></li>
+  <li>Chave da API do Portal da Transparência (cadastro gratuito)</li>
+</ul>
+
+<h3>Passo a passo</h3>
+
+<div class="step">
+  <div class="num">1</div>
+  <div class="body">
+    <h4>Subir banco e Redis</h4>
+    <pre><code>cd /home/derek-cobain/Horus
+docker compose up -d</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">2</div>
+  <div class="body">
+    <h4>Configurar .env</h4>
+    <p>O arquivo <code>backend/.env</code> precisa ter:</p>
+    <pre><code>DATABASE_URL=postgresql://horus:horus123@localhost:5433/horus
+REDIS_URL=redis://localhost:6380/0
+API_PORTAL_TRANSPARENCIA_KEY=sua_chave_aqui</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">3</div>
+  <div class="body">
+    <h4>Instalar dependências</h4>
+    <pre><code>cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">4</div>
+  <div class="body">
+    <h4>Popular dados de desenvolvimento (mock)</h4>
+    <pre><code>python -m app.seed</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">5</div>
+  <div class="body">
+    <h4>Subir a API</h4>
+    <pre><code>uvicorn app.main:app --host 127.0.0.1 --port 8000</code></pre>
+    <p>Abre o navegador em <strong>http://127.0.0.1:8000/docs</strong></p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">6</div>
+  <div class="body">
+    <h4>Carregar dados reais</h4>
+    <p>No Swagger, executar nesta ordem:</p>
+    <ol>
+      <li><code>POST /ingestao/ceis?paginas=5</code> — puxa empresas sancionadas reais</li>
+      <li><code>POST /ingestao/contratos-de-sancionados?max_empresas=20</code> — busca contratos delas</li>
+      <li><code>POST /ml/treinar</code> — treina o Isolation Forest</li>
+    </ol>
+  </div>
+</div>
+
+<div class="step">
+  <div class="num">7</div>
+  <div class="body">
+    <h4>Ver resultados</h4>
+    <p>Os endpoints "interessantes" para o vídeo demo:</p>
+    <ul>
+      <li><code>GET /cruzamentos/resumo</code></li>
+      <li><code>GET /cruzamentos/empresa-sancionada</code></li>
+      <li><code>GET /ml/anomalias?top_n=10</code></li>
+      <li><code>GET /dashboard/kpis</code></li>
+    </ul>
+  </div>
+</div>
+</section>
+
+<!-- ===================== 10. ESTRUTURA DE ARQUIVOS ===================== -->
+<section class="secao quebra">
+<h2>10. Estrutura de arquivos do projeto</h2>
+
+<div class="arch">
+Horus/
+├── docker-compose.yml          ← Postgres (5433) + Redis (6380)
+├── docs/
+│   ├── document_pdf.pdf        ← edital oficial PI III FAESA
+│   ├── horus_v2.pdf            ← relatório de escopo aprovado
+│   ├── HORUS_PLANO.md          ← plano interno
+│   ├── api_portal_transparencia.md  ← credencial e notas da API CGU
+│   └── relatorio/              ← (este relatório!)
+│       ├── relatorio.html
+│       ├── HORUS_RELATORIO_06_05_2026.pdf
+│       └── assets/
+│           ├── swagger_overview.png
+│           ├── resp_*.json     (respostas reais coletadas)
+│           └── casos_reais.txt
+└── backend/
+    ├── requirements.txt        ← deps Python
+    ├── .env                    ← credenciais (não commitado)
+    └── app/
+        ├── main.py             ← FastAPI + lifespan + CORS + routers
+        ├── database.py         ← engine SQLAlchemy
+        ├── models.py           ← 6 entidades ORM
+        ├── schemas.py          ← validação Pydantic
+        ├── seed.py             ← dados mock plantados
+        ├── analytics/
+        │   ├── score.py            ← score determinístico (regras)
+        │   ├── isolation_forest.py ← ML (NOVO HOJE)
+        │   └── models/
+        │       └── isolation_forest.joblib  (NOVO HOJE)
+        ├── ingestao/
+        │   └── portal_transparencia.py
+        │       ├── buscar_ceis()                    ← já existia
+        │       ├── buscar_contratos_por_cnpj()      ← NOVO HOJE
+        │       └── ingerir_contratos_de_sancionados() ← NOVO HOJE
+        └── routers/
+            ├── ingestao.py     ← +endpoint contratos-de-sancionados
+            ├── cruzamentos.py
+            ├── ml.py           ← NOVO HOJE
+            ├── dashboard.py
+            ├── busca.py
+            ├── agentes.py
+            └── empresas.py
+</div>
+
+<h3>Tabelas no banco (modelos SQLAlchemy)</h3>
+<table>
+<tr><th>Tabela</th><th>O que guarda</th><th>Linhas hoje</th></tr>
+<tr><td><code>agentes_publicos</code></td><td>Servidor federal: CPF, nome, órgão, cargo, remuneração</td><td class="num">200</td></tr>
+<tr><td><code>empresas</code></td><td>Pessoa jurídica: CNPJ, razão social, situação, score</td><td class="num">144</td></tr>
+<tr><td><code>socios_empresa</code></td><td>Vínculo CPF ↔ CNPJ (quem é sócio de quem)</td><td class="num">150</td></tr>
+<tr><td><code>contratos_publicos</code></td><td>Contrato federal: fornecedor, órgão, valor, vigência, objeto</td><td class="num">118</td></tr>
+<tr><td><code>ceis</code></td><td>Sanção CGU: CNPJ, tipo, datas, órgão sancionador</td><td class="num">64</td></tr>
+<tr><td><code>doacoes_eleitorais</code></td><td>Doação TSE: doador, candidato, valor, ano, cargo</td><td class="num">30</td></tr>
+</table>
+</section>
+
+<!-- ===================== 11. RESPOSTAS REAIS ===================== -->
+<section class="secao quebra">
+<h2>11. Respostas reais da API (coletadas durante a geração deste PDF)</h2>
+
+<h3>GET / (health check)</h3>
+<pre class="json">{
+  "projeto": "Hórus",
+  "versao": "0.2.0",
+  "descricao": "Sistema Inteligente de Fiscalização de Dados Públicos",
+  "status": "online 👁️",
+  "docs": "/docs"
+}</pre>
+
+<h3>GET /cruzamentos/resumo</h3>
+<pre class="json">{
+  "conflito_interesse": 8,
+  "retorno_favor":      23,
+  "empresa_sancionada": 57,
+  "total":              88
+}</pre>
+
+<h3>GET /dashboard/kpis</h3>
+<pre class="json">{
+  "total_agentes": 200,
+  "total_empresas": 144,
+  "total_irregularidades": 88,
+  "valor_contratos_suspeitos": 161339053.17,
+  "distribuicao_risco": [
+    { "faixa": "0-20",   "quantidade": 190 },
+    { "faixa": "21-40",  "quantidade": 2   },
+    { "faixa": "41-60",  "quantidade": 3   },
+    { "faixa": "61-80",  "quantidade": 5   },
+    { "faixa": "81-100", "quantidade": 0   }
+  ]
+}</pre>
+
+<h3>GET /ml/anomalias?top_n=3</h3>
+<pre class="json">[
+  {
+    "cnpj": "15.649.677/0001-22",
+    "razao_social": "MATOS EQUIPAMENTOS HOSPITALARES LTDA",
+    "anomaly_score": -0.1508,
+    "is_anomaly": true,
+    "features": {
+      "num_contratos":           3.0,
+      "valor_total_contratos":   13663700.78,
+      "valor_max_contrato":      6813188.60,
+      "num_orgaos_distintos":    3.0,
+      "num_socios":              3.0,
+      "num_sancoes_ceis":        1.0,
+      "num_doacoes_realizadas":  1.0
+    }
+  },
+  {
+    "cnpj": "08.900.850/0001-58",
+    "razao_social": "ATIVA TERCEIRIZACAO LTDA",
+    "anomaly_score": -0.1280,
+    "is_anomaly": true,
+    "features": {
+      "num_contratos":           15.0,
+      "valor_total_contratos":   10907788.17,
+      "valor_max_contrato":      2317746.94,
+      "num_orgaos_distintos":    3.0,
+      "num_socios":              0.0,
+      "num_sancoes_ceis":        1.0,
+      "num_doacoes_realizadas":  0.0
+    }
+  }
+]</pre>
+</section>
+
+<!-- ===================== 12. PRÓXIMOS PASSOS ===================== -->
+<section class="secao quebra">
+<h2>12. O que falta — roadmap até a Entrega 3 (12/06/2026)</h2>
+
+<h3>🟢 Esta semana (fechamento da Entrega 2 — até 08/05)</h3>
+<ul>
+  <li>Notebook Jupyter <code>01_exploracao_dados.ipynb</code> com gráficos (matplotlib/seaborn) — <em>distribuição de scores, top anomalias, comparação score determinístico vs ML</em></li>
+  <li>README.md na raiz do projeto</li>
+  <li>Vídeo demo (Swagger executando + notebook + casos reais)</li>
+</ul>
+
+<h3>🟡 Fase C (09/05 → 07/06)</h3>
+<ul>
+  <li>Cruzamento 3 (nepotismo) — exige nova tabela <code>familiar</code> + seed</li>
+  <li>Cruzamento 4 (enriquecimento ilícito) — exige nova tabela <code>declaracao_patrimonio</code></li>
+  <li>NLP no Diário Oficial: spaCy (NER) + Gemini API (resumo/classificação)</li>
+  <li>Apache AGE: extensão Postgres para grafos + visualização com NetworkX</li>
+  <li>Celery + Redis: ingestões agendadas em background</li>
+  <li>Dashboard com gráficos no notebook (substitui frontend Next.js)</li>
+  <li>Testes pytest + GitHub Actions CI</li>
+</ul>
+
+<h3>🔴 Entrega 3 (08/06 → 12/06)</h3>
+<ul>
+  <li>MVP Final + vídeo</li>
+  <li>Defesa do projeto</li>
+</ul>
+
+<div class="box info">
+<div class="box-title">📌 Como esse roadmap se conecta com o edital</div>
+O edital de PI III/FAESA exige (a) <strong>sistema Web</strong>, (b) <strong>análise de dados</strong>, (c)
+<strong>ciência de dados/ML</strong>. Hoje cobrimos os três, com profundidade variada: o "Web" é o Swagger
++ FastAPI; a "análise" sai do notebook que ainda vai ser feito; o "ML" é o Isolation Forest já rodando.
+</div>
+</section>
+
+<!-- ===================== 13. GLOSSÁRIO ===================== -->
+<section class="secao quebra">
+<h2>13. Glossário (para não-técnicos)</h2>
+
+<table>
+<tr><th>Termo</th><th>Significado</th></tr>
+<tr><td><strong>API</strong></td><td>Endereço HTTP que devolve dados em JSON. O governo expõe APIs com dados públicos.</td></tr>
+<tr><td><strong>CEIS</strong></td><td>Cadastro de Empresas Inidôneas e Suspensas, da CGU. Lista oficial de empresas <em>proibidas</em> de fazer negócio com o governo.</td></tr>
+<tr><td><strong>CGU</strong></td><td>Controladoria-Geral da União. Mantém o Portal da Transparência.</td></tr>
+<tr><td><strong>CNPJ</strong></td><td>Identificador único de empresa (14 dígitos).</td></tr>
+<tr><td><strong>Cruzamento</strong></td><td>Operação de juntar dados de duas ou mais bases para descobrir algo que nenhuma delas mostra sozinha.</td></tr>
+<tr><td><strong>Endpoint</strong></td><td>URL específica de uma API que faz uma coisa só. Ex.: <code>/cruzamentos/resumo</code>.</td></tr>
+<tr><td><strong>FastAPI</strong></td><td>Framework Python para construir APIs HTTP de forma rápida e com documentação automática.</td></tr>
+<tr><td><strong>Ingestão</strong></td><td>Processo de puxar dados de uma fonte externa e armazenar no banco local.</td></tr>
+<tr><td><strong>Isolation Forest</strong></td><td>Algoritmo de ML que detecta valores fora da curva sem precisar de exemplos rotulados como "fraude/não-fraude".</td></tr>
+<tr><td><strong>JSON</strong></td><td>Formato textual de dados estruturados, parecido com dicionário Python.</td></tr>
+<tr><td><strong>Mock</strong></td><td>Dado falso, gerado por código, usado pra testar/demonstrar quando não temos o dado real.</td></tr>
+<tr><td><strong>ORM</strong></td><td>Object-Relational Mapping: biblioteca que traduz objetos do código em tabelas do banco.</td></tr>
+<tr><td><strong>Score</strong></td><td>Pontuação numérica de risco (0–100) calculada por regras explícitas.</td></tr>
+<tr><td><strong>Swagger UI</strong></td><td>Interface visual gerada automaticamente pelo FastAPI para testar a API no navegador.</td></tr>
+<tr><td><strong>Upsert</strong></td><td>Operação de banco que insere se não existe ou atualiza se já existe.</td></tr>
+</table>
+</section>
+
+<div style="margin-top: 30mm; text-align: center; color: #94a3b8; font-size: 9pt; border-top: 1px solid #e5e7eb; padding-top: 10mm;">
+Hórus — Relatório gerado automaticamente em 06/05/2026<br>
+👁️ Sistema Inteligente de Fiscalização de Dados Públicos · TADS/FAESA
+</div>
+
+</body>
+</html>

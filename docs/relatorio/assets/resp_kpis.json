@@ -1,0 +1,28 @@
+{
+    "total_agentes": 200,
+    "total_empresas": 144,
+    "total_irregularidades": 88,
+    "valor_contratos_suspeitos": 161339053.17,
+    "distribuicao_risco": [
+        {
+            "faixa": "0-20",
+            "quantidade": 190
+        },
+        {
+            "faixa": "21-40",
+            "quantidade": 2
+        },
+        {
+            "faixa": "41-60",
+            "quantidade": 3
+        },
+        {
+            "faixa": "61-80",
+            "quantidade": 5
+        },
+        {
+            "faixa": "81-100",
+            "quantidade": 0
+        }
+    ]
+}
