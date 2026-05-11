@@ -1,6 +1,0 @@
- Empresas: 144
- Sanções CEIS: 64
- Contratos: 118
- Agentes: 200
- Sócios: 150
-
