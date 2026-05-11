@@ -13,6 +13,36 @@ body {
   font-family:
     "JetBrains Mono", "Fira Code", "Source Code Pro", Menlo, Consolas,
     "Courier New", monospace;
+  font-feature-settings: "calt" 1, "liga" 0;
+}
+
+/* Scanlines sutis estilo CRT */
+.scanlines::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.012) 0px,
+    rgba(255, 255, 255, 0.012) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+}
+
+/* Cursor pulsante */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.cursor::after {
+  content: "▊";
+  animation: blink 1s steps(1) infinite;
+  margin-left: 2px;
+  color: #6ee07a;
 }
 
 ::-webkit-scrollbar {
@@ -24,5 +54,27 @@ body {
 }
 ::-webkit-scrollbar-thumb {
   background: #1f2a26;
-  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6ee07a;
+}
+
+/* Box-drawing helper */
+.box-top::before {
+  content: "┌─────────────────────────────────────────────────────────────────────────────┐";
+  display: block;
+  color: #1f2a26;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1;
+}
+.box-bottom::after {
+  content: "└─────────────────────────────────────────────────────────────────────────────┘";
+  display: block;
+  color: #1f2a26;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1;
 }
