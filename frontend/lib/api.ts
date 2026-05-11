@@ -54,6 +54,8 @@ export type Cadastro = {
   opcao_simples: boolean | null;
 };
 
+export type Classificacao = "GRAVE" | "VIGILANCIA" | "POTENCIAL";
+
 export type Caso = {
   empresa: {
     cnpj: string;
@@ -67,6 +69,8 @@ export type Caso = {
     orgao_sancionador: string;
     inicio: string | null;
     fim: string | null;
+    numero_processo: string | null;
+    vigente_hoje: boolean;
   }>;
   contratos: Array<{
     id: string;
@@ -85,6 +89,16 @@ export type Caso = {
   valor_total: number;
   n_contratos: number;
   n_aditivos_abusivos: number;
+  n_smoking_gun: number;
+  classificacao: Classificacao;
+  sancao_vigente_hoje: boolean;
+  tem_contrato_ativo_hoje: boolean;
+  links_verificacao: {
+    ceis: string;
+    portal_empresa: string;
+    dou: string | null;
+    google: string | null;
+  };
 };
 
 export type GrafoD3 = {

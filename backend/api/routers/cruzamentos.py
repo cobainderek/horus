@@ -1,4 +1,7 @@
 """Os 5 cruzamentos principais do Hórus."""
+from datetime import date
+from urllib.parse import quote_plus
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -8,6 +11,32 @@ from ..database import get_db
 from ..schemas import ConflitoInteresse, EmpresaSancionadaContrato, RetornoFavor
 
 router = APIRouter(prefix="/cruzamentos", tags=["Cruzamentos"])
+
+
+def _classificar_caso(
+    sancao_vigente_hoje: bool,
+    tem_contrato_ativo_hoje: bool,
+    tem_sobreposicao: bool,
+) -> str:
+    if sancao_vigente_hoje and tem_contrato_ativo_hoje:
+        return "GRAVE"
+    if not sancao_vigente_hoje and tem_sobreposicao:
+        return "VIGILANCIA"
+    return "POTENCIAL"
+
+
+def _links_verificacao(cnpj: str, numero_processo: str | None, orgao_sancionador: str | None) -> dict:
+    """URLs públicas pra confirmar manualmente o caso."""
+    cnpj_d = "".join(x for x in cnpj if x.isdigit())
+    proc = (numero_processo or "").strip()
+    orgao = (orgao_sancionador or "").strip()
+    busca = quote_plus(f'"{proc}" "{orgao}"' if proc and orgao else proc or orgao)
+    return {
+        "ceis": f"https://portaldatransparencia.gov.br/sancoes/ceis?cnpjSancionado={cnpj_d}",
+        "portal_empresa": f"https://portaldatransparencia.gov.br/pessoa-juridica/{cnpj_d}",
+        "dou": f"https://www.in.gov.br/consulta/-/buscar/dou?q={quote_plus(proc)}" if proc else None,
+        "google": f"https://www.google.com/search?q={busca}" if busca else None,
+    }
 
 
 @router.get("/conflito-interesse", response_model=list[ConflitoInteresse])
@@ -106,10 +135,11 @@ def casos(
     """), {"lim": limite, "v": valor_min}).fetchall()
 
     resultados = []
+    hoje_iso = date.today().isoformat()
     for emp in empresas:
         sancoes = db.execute(text("""
             SELECT tipo_sancao, orgao_sancionador,
-                   data_inicio_sancao, data_fim_sancao
+                   data_inicio_sancao, data_fim_sancao, numero_processo
               FROM ceis
              WHERE cnpj = :cnpj
              ORDER BY data_inicio_sancao DESC
@@ -164,6 +194,42 @@ def casos(
 
         n_aditivos = sum(1 for c in contratos_dict if c["tem_aditivo_abusivo"])
 
+        # ─── classificação temporal ───
+        sancao_vigente = any(
+            (s.data_inicio_sancao or "") <= hoje_iso
+            and (not s.data_fim_sancao or s.data_fim_sancao >= hoje_iso)
+            for s in sancoes
+        )
+        tem_contrato_ativo = any(
+            (c["data_fim"] or "") >= hoje_iso for c in contratos_dict
+        )
+        # sobreposição: contrato em vigor enquanto sanção em vigor (qualquer época)
+        tem_sobreposicao = False
+        for s in sancoes:
+            inicio_s = s.data_inicio_sancao or ""
+            fim_s = s.data_fim_sancao or "9999-12-31"
+            for ct in contratos_dict:
+                inicio_c = ct["data_inicio"] or ""
+                fim_c = ct["data_fim"] or "9999-12-31"
+                if inicio_c <= fim_s and fim_c >= inicio_s:
+                    tem_sobreposicao = True
+                    break
+            if tem_sobreposicao:
+                break
+        # contrato assinado APÓS sanção começar (smoking gun)
+        n_smoking = sum(
+            1 for ct in contratos_dict for s in sancoes
+            if ct.get("data_assinatura") and ct["data_assinatura"] >= (s.data_inicio_sancao or "9999-12-31")
+        )
+        classificacao = _classificar_caso(sancao_vigente, tem_contrato_ativo, tem_sobreposicao)
+
+        sancao_principal = sancoes[0] if sancoes else None
+        links = _links_verificacao(
+            emp.cnpj,
+            sancao_principal.numero_processo if sancao_principal else None,
+            sancao_principal.orgao_sancionador if sancao_principal else None,
+        )
+
         resultados.append({
             "empresa": {
                 "cnpj": emp.cnpj,
@@ -192,6 +258,9 @@ def casos(
                     "orgao_sancionador": s.orgao_sancionador,
                     "inicio": s.data_inicio_sancao,
                     "fim": s.data_fim_sancao,
+                    "numero_processo": s.numero_processo,
+                    "vigente_hoje": (s.data_inicio_sancao or "") <= hoje_iso
+                                    and (not s.data_fim_sancao or s.data_fim_sancao >= hoje_iso),
                 }
                 for s in sancoes
             ],
@@ -199,6 +268,11 @@ def casos(
             "valor_total": float(emp.valor_total),
             "n_contratos": int(emp.n_contratos),
             "n_aditivos_abusivos": n_aditivos,
+            "n_smoking_gun": n_smoking,
+            "classificacao": classificacao,
+            "sancao_vigente_hoje": sancao_vigente,
+            "tem_contrato_ativo_hoje": tem_contrato_ativo,
+            "links_verificacao": links,
         })
     return resultados
 

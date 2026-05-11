@@ -2,7 +2,28 @@
 
 import { useState } from "react";
 
-import { fmtBRL, type Caso } from "@/lib/api";
+import { fmtBRL, type Caso, type Classificacao } from "@/lib/api";
+
+const CLASSIFICACAO = {
+  GRAVE: {
+    label: "GRAVE",
+    descricao: "sanção vigente + contrato ativo agora",
+    borda: "border-l-4 border-l-red-500",
+    badge: "bg-red-900/40 border-red-500 text-red-300",
+  },
+  VIGILANCIA: {
+    label: "VIGILÂNCIA",
+    descricao: "sanção encerrada, mas contratou enquanto estava punida",
+    borda: "border-l-4 border-l-orange-500",
+    badge: "bg-orange-900/30 border-orange-500 text-orange-300",
+  },
+  POTENCIAL: {
+    label: "POTENCIAL",
+    descricao: "no CEIS, sem sobreposição temporal comprovada",
+    borda: "border-l-4 border-l-yellow-700/50",
+    badge: "bg-yellow-900/20 border-yellow-700 text-yellow-500",
+  },
+} satisfies Record<Classificacao, { label: string; descricao: string; borda: string; badge: string }>;
 
 const fmtData = (d: string | null) => {
   if (!d) return "—";
@@ -34,14 +55,28 @@ export function CasoCard({ caso, indice }: { caso: Caso; indice: number }) {
   const sancao = caso.sancoes[0];
   const cadastro = caso.cadastro;
   const objetoCurto = (s: string) => (s.length > 200 ? s.slice(0, 197) + "..." : s);
+  const cls = CLASSIFICACAO[caso.classificacao];
 
   return (
-    <article className="bg-card border border-border rounded p-5">
+    <article className={`bg-card border border-border rounded p-5 ${cls.borda}`}>
       {/* CABEÇALHO */}
       <header className="flex items-start justify-between gap-4 pb-4 border-b border-border">
         <div className="min-w-0">
-          <div className="text-dim text-[10px] uppercase tracking-wider mb-1">
-            caso #{String(indice).padStart(2, "0")}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-dim text-[10px] uppercase tracking-wider">
+              caso #{String(indice).padStart(2, "0")}
+            </span>
+            <span
+              className={`inline-block px-2 py-0.5 border text-[10px] uppercase tracking-wider rounded ${cls.badge}`}
+              title={cls.descricao}
+            >
+              {cls.label}
+            </span>
+            {caso.n_smoking_gun > 0 && (
+              <span className="inline-block px-2 py-0.5 border border-red-600 bg-red-900/40 text-red-300 text-[10px] uppercase tracking-wider rounded">
+                ⚠ {caso.n_smoking_gun} contrato{caso.n_smoking_gun !== 1 ? "s" : ""} pós-sanção
+              </span>
+            )}
           </div>
           <h2 className="text-fg text-lg leading-tight font-semibold">
             {caso.empresa.razao_social}
@@ -82,6 +117,15 @@ export function CasoCard({ caso, indice }: { caso: Caso; indice: number }) {
             <span className={`inline-block px-2 py-0.5 border text-[10px] uppercase tracking-wider rounded ${corSancao(sancao.tipo)}`}>
               {sancao.tipo || "sancionada"}
             </span>
+            {sancao.vigente_hoje ? (
+              <span className="inline-block px-2 py-0.5 border border-red-500 bg-red-900/30 text-red-300 text-[10px] uppercase tracking-wider rounded">
+                ● em vigor
+              </span>
+            ) : (
+              <span className="inline-block px-2 py-0.5 border border-dim/40 text-dim text-[10px] uppercase tracking-wider rounded">
+                ○ encerrada
+              </span>
+            )}
             <span className="text-dim text-xs">
               aplicada por <span className="text-fg">{sancao.orgao_sancionador || "—"}</span>
             </span>
@@ -94,6 +138,11 @@ export function CasoCard({ caso, indice }: { caso: Caso; indice: number }) {
               </span>
             )}
           </div>
+          {sancao.numero_processo && (
+            <div className="text-dim text-[10px] mt-1 font-mono">
+              processo {sancao.numero_processo}
+            </div>
+          )}
         </div>
       )}
 
@@ -206,16 +255,47 @@ export function CasoCard({ caso, indice }: { caso: Caso; indice: number }) {
         )}
       </div>
 
-      <footer className="mt-4 pt-3 border-t border-border flex justify-between text-xs">
-        <a
-          href={caso.empresa.link_transparencia}
-          target="_blank"
-          rel="noreferrer"
-          className="text-dim hover:text-accent"
-        >
-          portal da transparência ↗
-        </a>
-        <span className="text-dim font-mono">{caso.empresa.cnpj}</span>
+      <footer className="mt-4 pt-3 border-t border-border">
+        <div className="text-dim text-[10px] uppercase tracking-wider mb-2">verificar nas fontes</div>
+        <div className="flex flex-wrap gap-3 text-xs">
+          <a
+            href={caso.links_verificacao.ceis}
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent hover:underline"
+          >
+            sanção no CEIS ↗
+          </a>
+          <a
+            href={caso.links_verificacao.portal_empresa}
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent hover:underline"
+          >
+            página da empresa ↗
+          </a>
+          {caso.links_verificacao.dou && (
+            <a
+              href={caso.links_verificacao.dou}
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent hover:underline"
+            >
+              busca no DOU ↗
+            </a>
+          )}
+          {caso.links_verificacao.google && (
+            <a
+              href={caso.links_verificacao.google}
+              target="_blank"
+              rel="noreferrer"
+              className="text-dim hover:text-accent"
+            >
+              pesquisar (Google) ↗
+            </a>
+          )}
+          <span className="ml-auto text-dim font-mono">{caso.empresa.cnpj}</span>
+        </div>
       </footer>
     </article>
   );
