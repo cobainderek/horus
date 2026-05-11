@@ -14,10 +14,14 @@ build/
 .env.local
 .env.*.local
 
-# Credenciais e segredos em docs/
-docs/api_portal_transparencia.md
-docs/credenciais_*.md
-docs/secrets_*.md
+# Documentos internos (planos, edital, roteiros — não vão pro repo público)
+docs/
+
+# Materiais de referência visual (capturas de tela usadas no design)
+sources/
+
+# Configuração local do Claude Code (sessão de assistente)
+.claude/
 
 # Node
 node_modules/
