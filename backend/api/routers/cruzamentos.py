@@ -108,8 +108,12 @@ def empresa_sancionada(db: Session = Depends(get_db)):
 
 @router.get("/casos")
 def casos(
-    limite: int = Query(50, ge=1, le=500),
+    limite: int = Query(200, ge=1, le=500),
     valor_min: float = Query(0, description="filtrar contratos abaixo desse valor"),
+    apenas_comprovados: bool = Query(
+        False,
+        description="se True, retorna só GRAVE+VIGILANCIA (descarta POTENCIAL).",
+    ),
     db: Session = Depends(get_db),
 ):
     """Lista de 'casos' narrados — uma empresa sancionada + sua história.
@@ -274,6 +278,9 @@ def casos(
             "tem_contrato_ativo_hoje": tem_contrato_ativo,
             "links_verificacao": links,
         })
+
+    if apenas_comprovados:
+        resultados = [r for r in resultados if r["classificacao"] != "POTENCIAL"]
     return resultados
 
 
