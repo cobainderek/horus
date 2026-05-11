@@ -53,3 +53,4 @@ data/raw/*.csv
 
 # Misc
 *.log
+README.md
