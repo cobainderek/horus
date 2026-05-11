@@ -102,9 +102,10 @@ def cmd_carregar_empresas(args) -> dict:
 # ─── tudo (fluxo completo) ────────────────────────────────────────────────
 
 def cmd_tudo(args) -> dict:
+    """Pipeline completo: 6 passos, CEIS + Contratos + BrasilAPI."""
     resultados = {}
 
-    print("[1/4] baixar CEIS (API → CSV)")
+    print("[1/6] baixar CEIS (CGU → CSV)")
     try:
         r = cgu.baixar_ceis_csv(max_paginas=args.paginas)
     except cgu.APIKeyError as e:
@@ -113,13 +114,13 @@ def cmd_tudo(args) -> dict:
     print(f"      ✓ {r['csv']} — {r['linhas']} linhas")
     resultados["baixar_ceis"] = r
 
-    print("[2/4] carregar CEIS (CSV → BD)")
+    print("[2/6] carregar CEIS (CSV → BD)")
     with SessionLocal() as db:
         r = cgu.carregar_ceis_csv(db, Path(resultados["baixar_ceis"]["csv"]))
-    print(f"      ✓ inseridos={r['inseridos']} duplicados={r['duplicados']}")
+    print(f"      ✓ inseridos={r['inseridos']} atualizados={r['atualizados']}")
     resultados["carregar_ceis"] = r
 
-    print("[3/4] baixar contratos das sancionadas (API → CSV)")
+    print("[3/6] baixar contratos das sancionadas (CGU → CSV)")
     from .api.models import CEIS, Empresa
     with SessionLocal() as db:
         cnpjs = [
@@ -136,11 +137,24 @@ def cmd_tudo(args) -> dict:
     print(f"      ✓ {r['csv']} — {r['linhas']} linhas")
     resultados["baixar_contratos"] = r
 
-    print("[4/4] carregar contratos (CSV → BD)")
+    print("[4/6] carregar contratos (CSV → BD)")
     with SessionLocal() as db:
         r = cgu.carregar_contratos_csv(db, Path(resultados["baixar_contratos"]["csv"]))
-    print(f"      ✓ inseridos={r['inseridos']} duplicados={r['duplicados']}")
+    print(f"      ✓ inseridos={r['inseridos']} atualizados={r['atualizados']}")
     resultados["carregar_contratos"] = r
+
+    print(f"[5/6] baixar dados cadastrais (BrasilAPI → CSV) — {len(cnpjs)} CNPJs")
+    r = brasilapi.baixar_empresas_csv(cnpjs, sleep_segundos=args.sleep_brasilapi)
+    print(f"      ✓ {r['encontradas']}/{r['consultadas']} OK · {r['erros']} erros · {r['socios']} sócios")
+    resultados["baixar_empresas"] = r
+
+    print("[6/6] carregar dados cadastrais + sócios (CSV → BD)")
+    with SessionLocal() as db:
+        r_emp = brasilapi.carregar_empresas_csv(db, Path(resultados["baixar_empresas"]["csv_empresas"]))
+        r_soc = brasilapi.carregar_socios_csv(db, Path(resultados["baixar_empresas"]["csv_socios"]))
+    print(f"      ✓ empresas: inseridas={r_emp['inseridos']} atualizadas={r_emp['atualizados']} · sócios: inseridos={r_soc['inseridos']}")
+    resultados["carregar_empresas"] = r_emp
+    resultados["carregar_socios"] = r_soc
 
     return resultados
 
@@ -223,10 +237,11 @@ def main() -> None:
     p.set_defaults(func=cmd_carregar_empresas)
 
     # fluxo completo
-    p = sub.add_parser("tudo", help="fluxo completo: baixar CEIS → carregar → baixar contratos → carregar")
-    p.add_argument("--paginas", type=int, default=30, help="páginas CEIS")
+    p = sub.add_parser("tudo", help="fluxo completo: CEIS + contratos + BrasilAPI (6 passos)")
+    p.add_argument("--paginas", type=int, default=50, help="páginas CEIS (default 50)")
     p.add_argument("--paginas-contrato", type=int, default=2, help="páginas por empresa em contratos")
-    p.add_argument("--max-empresas", type=int, default=None, help="limita empresas pra contratos")
+    p.add_argument("--max-empresas", type=int, default=None, help="limita empresas pra contratos+BrasilAPI")
+    p.add_argument("--sleep-brasilapi", type=float, default=0.8, help="pausa entre chamadas BrasilAPI (rate-limit)")
     p.set_defaults(func=cmd_tudo)
 
     # inspeção
